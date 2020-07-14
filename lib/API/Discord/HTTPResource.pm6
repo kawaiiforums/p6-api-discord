@@ -12,10 +12,15 @@ API::Discord::RESTy - Role for objects that can be sent/received over REST
 
 API::Discord::HTTPResource - Role for objects that can be CRUD'd
 
+API::Discord::HTTPMessage - Class representing the various JSON things we get sent
+
 =head1 DESCRIPTION
 
-This file defines the three roles listed above. They are all related to one
-another but not necessarily all required at once.
+This file defines the three roles and one class listed above. They are all
+related to one another but not necessarily all required at once.
+
+I bunged all the HTTP stuff in one place because it didn't seem necessary to do
+otherwise... the wisdom of this decision, time will tell.
 
 =head1 API::Discord::JSONy
 
@@ -172,5 +177,31 @@ role HTTPResource is export {
     method delete(RESTy $rest) {
         my $endpoint = endpoint-for(self, 'delete');
         $rest.remove($endpoint);
+    }
+}
+
+enum OPCODE is export (
+    <despatch heartbeat identify status-update
+        voice-state-update voice-ping
+        resume reconnect
+        request-members
+        invalid-session hello heartbeat-ack>
+);
+
+class HTTPMessage is export {
+    has $.source;
+    has $.opcode;
+    has $.payload;
+    has $.sequence;
+    has $.event;
+
+    method new($json) {
+        my %it; %it<source> = $json;
+        %it<opcode> = $json<op>;
+        %it<payload> = $json<d>;
+        $json<s> andthen %it<sequence> = $_;
+        $json<t> andthen %it<event> = $_;
+
+        self.bless(|%it);
     }
 }
